@@ -3,15 +3,15 @@ import { BookOpen } from "lucide-react";
 
 const TitlePage = () => {
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden  p-6 rounded-lg shadow-md bg-cover" style={{ backgroundImage: `url(${phPattern})` }}>
+    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden p-6 rounded-lg shadow-md bg-cover bg-right" style={{ backgroundImage: `url(${phPattern})` }}>
       {/* Background Paper Texture */}
       <div
-        className="absolute inset-0 opacity-20 rounded-lg scale-[1.05] blur-sm"
-        style={{
-          backgroundImage: `url(${phPattern})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        className="absolute inset-0 opacity-20 rounded-lg "
+        // style={{
+        //   backgroundImage: `url(${phPattern})`,
+        //   backgroundSize: "cover",
+        //   backgroundPosition: "center",
+        // }}
       />
 
       {/* Parallax Floating Circles */}

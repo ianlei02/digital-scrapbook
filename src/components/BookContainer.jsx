@@ -14,10 +14,11 @@ import SectionGovPolicyPage1 from "./SectionGovPolicyPage1";
 import SectionGovPolicyPage2 from "./SectionGovPolicyPage2";
 import ReflectionPage1 from "./ReflectionPage1";
 import ReflectionPage2 from "./ReflectionPage2";
+import phPattern from "@/assets/paper-dark.jpg";
 
 const BookContainer = () => {
   return (
-    <div className="flex justify-center items-center min-h-screen bg-base-200">
+    <div className="flex justify-center items-center min-h-screen ">
       <HTMLFlipBook
         width={500}
         height={700}
@@ -26,6 +27,11 @@ const BookContainer = () => {
         maxShadowOpacity={0.5}
         size='fixed'
         className="shadow-2xl rounded-xl"
+         style={{
+                  backgroundImage: `url(${phPattern})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "left",
+                }}
         mobileScrollSupport={true}
       >
    

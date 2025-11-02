@@ -1,0 +1,82 @@
+.lanyard-container {
+  position: fixed; /* or 'absolute' if you want it within a parent */
+  top: -10px; /* adjust position as needed */
+  right: 50px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: sway 3s ease-in-out infinite alternate;
+}
+
+.lanyard-strap {
+  width: 6px;
+  height: 150px;
+  background-color: #131313;
+  border-radius: 3px;
+}
+
+.lanyard-clip {
+  width: 20px;
+  height: 10px;
+  background-color: gray;
+  border-radius: 2px;
+  /* margin-top: 2px; */
+}
+
+.lanyard-card {
+  width: 200px;
+  height: 300px;
+  background-color: white;
+  border: 2px solid #161616;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  text-align: center;
+  /* margin-top: 4px; */
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+}
+
+.card-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  margin: 0 auto 8px;
+}
+
+.card-info {
+  font-family: "Arial", sans-serif;
+}
+
+.card-name-id {
+  font-family: "Arial", sans-serif;
+  font-size: 1rem;
+  text-transform: uppercase;
+  font-weight: bold;
+  color: #333;
+}
+
+.card-role {
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+.card-project {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Optional animation for realism */
+@keyframes sway {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
