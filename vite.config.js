@@ -5,6 +5,7 @@ import path from "path";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: '/digital-scrapbook',
   assetsInclude: ['**/*.glb'],
   resolve: {
     alias: {
