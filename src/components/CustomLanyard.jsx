@@ -1,6 +1,6 @@
 import React from "react";
 import "../Lanyard.css";
-import profileIMG from "@/assets/formal.jpg";
+import profileIMG from "@/assets/formal.png";
 const CustomLanyard = () => {
   return (
     <div className="lanyard-container">

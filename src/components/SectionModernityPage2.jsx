@@ -1,4 +1,4 @@
-import modernPop from '@/assets/paper-texture.jpg';
+import modernPop from '@/assets/popculture.jpg';
 const SectionModernityPage2 = () => {
   return (
     <div className="space-y-6 book-page page-dotted">

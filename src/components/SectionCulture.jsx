@@ -1,5 +1,5 @@
 import { BookMarked } from 'lucide-react';
-import tinikling from '@/assets/paper-dark.jpg';
+import tinikling from '@/assets/tinikling.jpeg';
 
 const SectionCulture = () => {
   return (

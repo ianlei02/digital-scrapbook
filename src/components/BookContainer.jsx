@@ -14,6 +14,8 @@ import SectionGovPolicyPage1 from "./SectionGovPolicyPage1";
 import SectionGovPolicyPage2 from "./SectionGovPolicyPage2";
 import ReflectionPage1 from "./ReflectionPage1";
 import ReflectionPage2 from "./ReflectionPage2";
+import { ReferencesPage1, ReferencesPage2 } from "./ReferencesPages";
+
 import phPattern from "@/assets/paper-dark.jpg";
 
 const BookContainer = () => {
@@ -25,73 +27,78 @@ const BookContainer = () => {
         showCover={true}
         drawShadow={true}
         maxShadowOpacity={0.5}
-        size='fixed'
+        size="fixed"
         className="shadow-2xl rounded-xl"
-         style={{
-                  backgroundImage: `url(${phPattern})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "left",
-                }}
+        style={{
+          backgroundImage: `url(${phPattern})`,
+          backgroundSize: "cover",
+          backgroundPosition: "left",
+        }}
         mobileScrollSupport={true}
       >
-   
         <div>
           <TitlePage />
         </div>
         <div>
-          <TableOfContents/>
+          <TableOfContents />
         </div>
         <div>
-          <SectionCulture/>
+          <SectionCulture />
         </div>
         <div>
-          <SectionFolkHighPopPage1/>
+          <SectionFolkHighPopPage1 />
         </div>
         <div>
-          <SectionFolkHighPopPage2/>
+          <SectionFolkHighPopPage2 />
         </div>
         <div>
-          <PageEthnocentrism/>
+          <PageEthnocentrism />
         </div>
         <div>
-          <PageCulturalRelativism/>
+          <PageCulturalRelativism />
         </div>
         <div>
-          <SectionHistory/>
+          <SectionHistory />
         </div>
         <div>
-          <Timeline/>
+          <Timeline />
         </div>
         <div>
-          <SectionModernityPage1/>
+          <SectionModernityPage1 />
         </div>
         <div>
-          <SectionModernityPage2/>
+          <SectionModernityPage2 />
         </div>
         <div>
-          <SectionGovPolicyPage1/>
+          <SectionGovPolicyPage1 />
         </div>
         <div>
-          <SectionGovPolicyPage2/>
+          <SectionGovPolicyPage2 />
         </div>
         <div>
-          <ReflectionPage1/>
+          <ReflectionPage1 />
         </div>
         <div>
-          <ReflectionPage2/>
+          <ReflectionPage2 />
         </div>
 
+        <div>
+          <ReferencesPage1 />
+        </div>
+        <div>
+          <ReferencesPage2 />
+        </div>
       </HTMLFlipBook>
     </div>
-        //  <TitlePage />
-        //   <TableOfContents />
-        //   <SectionCulture />
-        //   <SectionFolkHighPop />
-        //   <SectionEthnoRelativism />
-        //   <SectionHistory />
-        //   <SectionModernity />
-        //   <SectionGovPolicy />
-        //   <ReflectionPage />
+    //  <TitlePage />
+    //   <TableOfContents />
+    //   <SectionCulture />
+    //   <SectionFolkHighPop />
+    //   <SectionEthnoRelativism />
+    //   <SectionHistory />
+    //   <SectionModernity />
+    //   <SectionGovPolicy />
+    //   <ReflectionPage />
   );
 };
 
