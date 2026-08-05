@@ -177,6 +177,17 @@ export default function App() {
     return () => stopCamera();
   }, [stopCamera]);
 
+  // The <video> element only exists once we're on the "camera" step, but the
+  // stream is requested one step earlier (on the theme screen) so permission
+  // is granted before the camera UI appears. Re-attach the already-granted
+  // stream to the video element as soon as it mounts.
+  useEffect(() => {
+    if (step === "camera" && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [step]);
+
   // -------------------------------------------------------------------
   // Grab a single frame from the live video, cropped to a 4:3 photo.
   // -------------------------------------------------------------------
