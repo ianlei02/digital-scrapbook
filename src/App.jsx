@@ -1,815 +1,854 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import {
+  Camera,
+  Download,
+  RefreshCw,
+  Sparkles,
+  Heart,
+  Image as ImageIcon,
+  Loader,
+  ChevronRight,
+  Check,
+  X,
+  Aperture,
+} from "lucide-react";
 
-/*
-  =========================================================================
-  PRECIOUS — "Heaven's Brightest Angel"
-  A single-file, single-component React + Tailwind landing page.
+/**
+ * ------------------------------------------------------------------
+ *  Life•Four Booth — a single-file photo booth experience
+ * ------------------------------------------------------------------
+ *  Flow: landing -> theme -> camera (4x countdown+capture) -> generating -> strip
+ *  Everything (state, camera handling, canvas compositing, UI) lives
+ *  in this one component per the project constraints.
+ * ------------------------------------------------------------------
+ */
 
-  Structure of this file (search these markers to navigate):
-    [FONTS]              Google Font injection
-    [HOOKS]               useReveal (scroll fade/slide-in) + misc effects
-    [DATA]                 Static copy/content arrays
-    [SECTION: NAV]
-    [SECTION: HERO]
-    [SECTION: ABOUT]
-    [SECTION: QUALITIES]
-    [SECTION: GALLERY]
-    [SECTION: TESTIMONIALS]
-    [SECTION: REGISTRY]
-    [SECTION: INVESTIGATION]
-    [SECTION: SCANNER]
-    [SECTION: FINAL REVEAL]
-    [SECTION: EVIDENCE]
-    [SECTION: ANNOUNCEMENT]
-    [SECTION: APPEAL]
-    [SECTION: FOOTER]
-    [EASTER EGGS]           halo click, "M" keypress, tab-title swap
-  =========================================================================
-*/
-
-/* ----------------------------[ FONTS ]---------------------------------- */
-function useGoogleFonts() {
-  useEffect(() => {
-    const id = "precious-fonts";
-    if (document.getElementById(id)) return;
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap";
-    document.head.appendChild(link);
-  }, []);
-}
-
-/* ----------------------------[ HOOKS ]----------------------------------- */
-// Fades + slides an element in once it scrolls into view.
-function useReveal(threshold = 0.2) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { threshold }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [threshold]);
-
-  return [ref, visible];
-}
-
-function Reveal({ children, className = "", delay = 0, as: Tag = "div" }) {
-  const [ref, visible] = useReveal(0.15);
-  return (
-    <Tag
-      ref={ref}
-      className={`transition-all duration-1000 ease-out ${className} ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-      }`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </Tag>
-  );
-}
-
-/* ----------------------------[ DATA ]------------------------------------ */
-const QUALITIES = [
-  { icon: "🤍", title: "Compassion", body: "Always willing to help." },
-  { icon: "✨", title: "Positivity", body: "Brings light wherever she goes." },
-  { icon: "🪽", title: "Grace", body: "Elegant in every way." },
-  { icon: "🌸", title: "Kindness", body: "Treats everyone with respect." },
-  { icon: "☀️", title: "Hope", body: "Makes everyone's day brighter." },
+// ---------------------------------------------------------------------------
+// Theme definitions — each theme drives both the on-screen UI accent and the
+// final composited strip (background, border color, text color, stickers).
+// ---------------------------------------------------------------------------
+const THEMES = [
+  {
+    id: "pinkCafe",
+    name: "Pink Café",
+    tagline: "warm blush & latte foam",
+    gradient: "from-rose-200 via-pink-100 to-fuchsia-100",
+    accent: "#fb7185",
+    accentSoft: "#ffe4e9",
+    stripBg: "#fff6f8",
+    stripBg2: "#ffeef2",
+    textColor: "#7a2e43",
+    decorations: ["♡", "✧", "☕"],
+    swatch: ["#fda4af", "#fbcfe8", "#fb7185"],
+  },
+  {
+    id: "sakura",
+    name: "Sakura",
+    tagline: "cherry blossoms in bloom",
+    gradient: "from-pink-100 via-rose-50 to-pink-200",
+    accent: "#f472b6",
+    accentSoft: "#fce7f3",
+    stripBg: "#fff0f6",
+    stripBg2: "#ffe4ef",
+    textColor: "#831843",
+    decorations: ["🌸", "✧", "♡"],
+    swatch: ["#f9a8d4", "#fce7f3", "#f472b6"],
+  },
+  {
+    id: "retroFilm",
+    name: "Retro Film",
+    tagline: "sun-warmed 35mm nostalgia",
+    gradient: "from-amber-100 via-orange-50 to-yellow-100",
+    accent: "#d97706",
+    accentSoft: "#fef3c7",
+    stripBg: "#fdf4e3",
+    stripBg2: "#fbe8c8",
+    textColor: "#78350f",
+    decorations: ["✦", "★", "●"],
+    swatch: ["#fbbf24", "#fde68a", "#b45309"],
+  },
+  {
+    id: "cloudySky",
+    name: "Cloudy Sky",
+    tagline: "soft blue afternoons",
+    gradient: "from-sky-100 via-blue-50 to-indigo-100",
+    accent: "#60a5fa",
+    accentSoft: "#e0f2fe",
+    stripBg: "#f0f7ff",
+    stripBg2: "#e3efff",
+    textColor: "#1e3a5f",
+    decorations: ["☁", "✧", "☀"],
+    swatch: ["#93c5fd", "#bfdbfe", "#3b82f6"],
+  },
+  {
+    id: "minimalBlack",
+    name: "Minimal Black",
+    tagline: "clean, quiet, timeless",
+    gradient: "from-gray-200 via-gray-100 to-gray-300",
+    accent: "#111827",
+    accentSoft: "#f3f4f6",
+    stripBg: "#fafafa",
+    stripBg2: "#efefef",
+    textColor: "#111827",
+    decorations: ["•", "—", "◦"],
+    swatch: ["#111827", "#6b7280", "#e5e7eb"],
+  },
 ];
 
-const GALLERY = [
-  { title: "Morning Light" },
-  { title: "Guardian Wings" },
-  { title: "Heaven's Smile" },
-  { title: "Peaceful Soul" },
-  { title: "Divine Grace" },
-  { title: "Light Among Us" },
+const ENCOURAGEMENTS = [
+  "Smile!",
+  "Looking good!",
+  "One more!",
+  "You're doing great!",
+  "Perfect!",
+  "Keep smiling!",
+  "Awesome!",
+  "Model mode activated!",
+  "So cute!",
+  "Nailed it!",
 ];
 
-const TESTIMONIALS = [
-  "She's literally an angel.",
-  "The nicest person I've ever met.",
-  "A blessing to everyone around her.",
-  "I've never seen anyone so kind.",
-];
+const TOTAL_PHOTOS = 4;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-const REGISTRY_STATS = [
-  { label: "Halo Integrity", value: 100, suspicious: false },
-  { label: "Wing Purity", value: 99, suspicious: false },
-  { label: "Celestial Aura", value: 98, suspicious: false },
-  { label: "Unknown Energy Signature", value: null, tag: "Detected", suspicious: true },
-];
-
-const REPORTS = [
-  { id: "01", body: "Subject continues behaving like an angel.", note: "No concerns." },
-  { id: "07", body: "Witness reported hearing strange noises around midnight.", note: "Cause unknown." },
-  { id: "13", body: "Subject denies all allegations.", note: "Statement accepted... for now." },
-  { id: "24", body: 'Multiple witnesses insist the subject is "too innocent."', note: "Further investigation recommended." },
-];
-
-const EVIDENCE = [
-  "Claims to be an angel.",
-  "Suspiciously nice.",
-  "Never available after midnight.",
-  "Wings verified... wrong species.",
-  "Continues denying everything.",
-  "Investigation concludes excessive innocence is suspicious.",
-];
-
-const SCAN_LINES = [
-  "Comparing Heavenly Database...",
-  "Searching Celestial Archives...",
-  "Cross-referencing Philippine Mythological Records...",
-  "Searching...",
-];
-
-/* ----------------------------[ ILLUSTRATIONS ]--------------------------- */
-// Simple, original, non-representational angelic silhouette (no real person).
-function AngelIllustration({ dark = false }) {
-  return (
-    <svg viewBox="0 0 400 480" className="w-full h-full" aria-hidden="true">
-      <defs>
-        <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={dark ? "#e11d48" : "#f5d78e"} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={dark ? "#e11d48" : "#f5d78e"} stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="wingGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={dark ? "#3f0d14" : "#ffffff"} />
-          <stop offset="100%" stopColor={dark ? "#170307" : "#dce8f7"} />
-        </linearGradient>
-        <linearGradient id="gownGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={dark ? "#5a0f18" : "#ffffff"} />
-          <stop offset="100%" stopColor={dark ? "#20040a" : "#eaf2fb"} />
-        </linearGradient>
-      </defs>
-
-      {/* halo glow */}
-      <ellipse cx="200" cy="90" rx="140" ry="140" fill="url(#haloGlow)" />
-      {/* halo ring */}
-      <ellipse
-        cx="200"
-        cy="80"
-        rx="52"
-        ry="14"
-        fill="none"
-        stroke={dark ? "#e11d48" : "#c8973f"}
-        strokeWidth="4"
-      />
-
-      {/* wings */}
-      <path
-        d="M200 220 C 90 180, 20 260, 40 380 C 100 340, 150 300, 200 260 Z"
-        fill="url(#wingGrad)"
-        opacity="0.95"
-      />
-      <path
-        d="M200 220 C 310 180, 380 260, 360 380 C 300 340, 250 300, 200 260 Z"
-        fill="url(#wingGrad)"
-        opacity="0.95"
-      />
-
-      {/* gown / body */}
-      <path
-        d="M200 140 C 160 140, 150 190, 155 230 C 130 300, 130 380, 140 460 L 260 460 C 270 380, 270 300, 245 230 C 250 190, 240 140, 200 140 Z"
-        fill="url(#gownGrad)"
-      />
-
-      {/* head */}
-      <circle cx="200" cy="118" r="34" fill={dark ? "#3a0a10" : "#fbeee0"} />
-
-      {/* simple hair suggestion */}
-      <path
-        d="M168 108 C 168 80, 232 80, 232 108 C 232 90, 168 90, 168 108 Z"
-        fill={dark ? "#170307" : "#caa66b"}
-        opacity="0.7"
-      />
-    </svg>
-  );
-}
-
-function CloudSVG({ className = "" }) {
-  return (
-    <svg viewBox="0 0 200 100" className={className} aria-hidden="true">
-      <ellipse cx="60" cy="60" rx="55" ry="30" fill="currentColor" />
-      <ellipse cx="110" cy="45" rx="45" ry="35" fill="currentColor" />
-      <ellipse cx="150" cy="65" rx="40" ry="25" fill="currentColor" />
-    </svg>
-  );
-}
-
-function FeatherSVG({ className = "" }) {
-  return (
-    <svg viewBox="0 0 40 120" className={className} aria-hidden="true">
-      <path
-        d="M20 0 C 30 20, 30 40, 20 60 C 10 40, 10 20, 20 0 Z"
-        fill="currentColor"
-      />
-      <path
-        d="M20 60 C 26 75, 26 95, 20 120 C 14 95, 14 75, 20 60 Z"
-        fill="currentColor"
-      />
-      <line x1="20" y1="0" x2="20" y2="120" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-    </svg>
-  );
-}
-
-/* ==========================================================================
-   MAIN APP
-   ========================================================================== */
 export default function App() {
-  useGoogleFonts();
+  // -------------------------------------------------------------------
+  // Core flow state
+  // -------------------------------------------------------------------
+  const [step, setStep] = useState("landing"); // landing | theme | camera | generating | strip
+  const [themeId, setThemeId] = useState("pinkCafe");
+  const theme = THEMES.find((t) => t.id === themeId) ?? THEMES[0];
 
-  const [haloBat, setHaloBat] = useState(false);
-  const [haloClicks, setHaloClicks] = useState(0);
-  const [mAlert, setMAlert] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [scanIndex, setScanIndex] = useState(0);
-  const [scanActive, setScanActive] = useState(false);
-  const [appealOpen, setAppealOpen] = useState(false);
+  // -------------------------------------------------------------------
+  // Camera / capture state
+  // -------------------------------------------------------------------
+  const [cameraError, setCameraError] = useState("");
+  const [cameraReady, setCameraReady] = useState(false);
+  const [photos, setPhotos] = useState([]); // array of dataURLs, up to 4
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [countdown, setCountdown] = useState(null); // 3,2,1 or null
+  const [flash, setFlash] = useState(false);
+  const [shutterPulse, setShutterPulse] = useState(false);
+  const [message, setMessage] = useState("Get ready!");
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const scannerRef = useRef(null);
-  const finalRevealRef = useRef(null);
-  const originalTitle = useRef(
-    typeof document !== "undefined" ? document.title : ""
-  );
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const captureCanvasRef = useRef(null); // hidden canvas used to grab a video frame
+  const sequenceRunningRef = useRef(false);
 
-  /* ---------- [EASTER EGG] "M" key listener ---------- */
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "m" || e.key === "M") {
-        setMAlert(true);
-        setTimeout(() => setMAlert(false), 2200);
+  // -------------------------------------------------------------------
+  // Camera lifecycle
+  // -------------------------------------------------------------------
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraReady(false);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setCameraError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
+      setCameraReady(true);
+      return true;
+    } catch (err) {
+      setCameraError(
+        "We couldn't access your camera. Please allow camera permissions and try again."
+      );
+      setCameraReady(false);
+      return false;
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  /* ---------- Tab title ---------- */
-  useEffect(() => {
-    document.title = "Precious | Heaven's Brightest Angel";
-    return () => {
-      document.title = originalTitle.current || "Precious";
-    };
   }, []);
 
   useEffect(() => {
-    if (revealed) {
-      document.title = "⚠️ Manananggal Confirmed";
+    // Clean up the camera stream whenever the component unmounts entirely.
+    return () => stopCamera();
+  }, [stopCamera]);
+
+  // -------------------------------------------------------------------
+  // Grab a single frame from the live video, cropped to a 4:3 photo.
+  // -------------------------------------------------------------------
+  const capturePhoto = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = captureCanvasRef.current;
+    if (!video || !canvas) return;
+
+    const targetRatio = 4 / 3;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return;
+
+    let sx, sy, sw, sh;
+    const currentRatio = vw / vh;
+    if (currentRatio > targetRatio) {
+      // video is wider than 4:3 -> crop the sides
+      sh = vh;
+      sw = vh * targetRatio;
+      sx = (vw - sw) / 2;
+      sy = 0;
     } else {
-      document.title = "Precious | Heaven's Brightest Angel";
+      // video is taller than 4:3 -> crop top/bottom
+      sw = vw;
+      sh = vw / targetRatio;
+      sx = 0;
+      sy = (vh - sh) / 2;
     }
-  }, [revealed]);
 
-  /* ---------- Scanner: cycles search text once in view ---------- */
+    canvas.width = 800;
+    canvas.height = 600;
+    const ctx = canvas.getContext("2d");
+    // mirror horizontally so the captured photo matches the mirrored preview
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    setPhotos((prev) => [...prev, dataUrl]);
+  }, []);
+
+  // -------------------------------------------------------------------
+  // The 4-photo capture sequence: countdown -> flash -> capture -> pause
+  // -------------------------------------------------------------------
   useEffect(() => {
-    const el = scannerRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setScanActive(true);
-          io.disconnect();
+    if (step !== "camera" || !cameraReady) return;
+    if (sequenceRunningRef.current) return;
+    sequenceRunningRef.current = true;
+    let cancelled = false;
+
+    const run = async () => {
+      for (let i = 0; i < TOTAL_PHOTOS; i++) {
+        if (cancelled) break;
+        setPhotoIndex(i);
+        setMessage(pick(ENCOURAGEMENTS));
+        await sleep(400);
+
+        for (let c = 3; c >= 1; c--) {
+          if (cancelled) break;
+          setCountdown(c);
+          await sleep(1000);
         }
-      },
-      { threshold: 0.4 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+        if (cancelled) break;
 
+        setCountdown(null);
+        setShutterPulse(true);
+        setFlash(true);
+        capturePhoto();
+        await sleep(180);
+        setFlash(false);
+        await sleep(120);
+        setShutterPulse(false);
+        await sleep(500);
+      }
+      if (!cancelled) {
+        setStep("generating");
+      }
+      sequenceRunningRef.current = false;
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+      sequenceRunningRef.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, cameraReady]);
+
+  // Generating screen: brief pause, then reveal the strip.
   useEffect(() => {
-    if (!scanActive) return;
-    const interval = setInterval(() => {
-      setScanIndex((i) => (i + 1) % SCAN_LINES.length);
-    }, 1100);
-    return () => clearInterval(interval);
-  }, [scanActive]);
+    if (step !== "generating") return;
+    const t = setTimeout(() => setStep("strip"), 1100);
+    return () => clearTimeout(t);
+  }, [step]);
 
-  /* ---------- Final reveal trigger ---------- */
-  useEffect(() => {
-    const el = finalRevealRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setRevealed(true);
-        }
-      },
-      { threshold: 0.25 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  // -------------------------------------------------------------------
+  // Navigation handlers
+  // -------------------------------------------------------------------
+  const goToTheme = () => setStep("theme");
 
-  /* ---------- [EASTER EGG] halo clicks ---------- */
-  const handleHaloClick = useCallback(() => {
-    setHaloClicks((c) => c + 1);
-    setHaloBat(true);
-    setTimeout(() => setHaloBat(false), 600);
-  }, []);
-
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const beginBooth = async () => {
+    setPhotos([]);
+    setPhotoIndex(0);
+    const ok = await startCamera();
+    if (ok) setStep("camera");
   };
 
+  const retake = () => {
+    setPhotos([]);
+    setPhotoIndex(0);
+    setCountdown(null);
+    if (!streamRef.current) {
+      startCamera().then((ok) => ok && setStep("camera"));
+    } else {
+      setStep("camera");
+    }
+  };
+
+  const startOver = () => {
+    stopCamera();
+    setPhotos([]);
+    setPhotoIndex(0);
+    setCountdown(null);
+    setStep("landing");
+  };
+
+  // -------------------------------------------------------------------
+  // Build & download the final composited strip as a PNG using canvas.
+  // -------------------------------------------------------------------
+  const downloadStrip = async () => {
+    if (photos.length < TOTAL_PHOTOS) return;
+    setIsDownloading(true);
+    await sleep(50); // let the UI paint the loading state first
+
+    const scale = 2; // render at 2x for crisp downloads
+    const width = 360 * scale;
+    const padding = 24 * scale;
+    const photoW = width - padding * 2;
+    const photoH = photoW * 0.75; // 4:3
+    const gap = 16 * scale;
+    const footerH = 92 * scale;
+    const perfR = 3 * scale;
+    const height = padding + TOTAL_PHOTOS * photoH + (TOTAL_PHOTOS - 1) * gap + padding + footerH;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+
+    // background gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, theme.stripBg);
+    bgGrad.addColorStop(1, theme.stripBg2);
+    roundRect(ctx, 0, 0, width, height, 20 * scale);
+    ctx.fillStyle = bgGrad;
+    ctx.fill();
+
+    // outer border
+    ctx.lineWidth = 2 * scale;
+    ctx.strokeStyle = theme.accent;
+    roundRect(ctx, 1 * scale, 1 * scale, width - 2 * scale, height - 2 * scale, 20 * scale);
+    ctx.stroke();
+
+    // perforation dots along top & bottom edges (mimics real strip stock)
+    ctx.fillStyle = "#ffffff";
+    const dotGap = 14 * scale;
+    for (let x = padding; x < width - padding; x += dotGap) {
+      ctx.beginPath();
+      ctx.arc(x, 10 * scale, perfR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // photos, loaded sequentially
+    for (let i = 0; i < TOTAL_PHOTOS; i++) {
+      const img = await loadImage(photos[i]);
+      const y = padding + i * (photoH + gap);
+      ctx.save();
+      roundRect(ctx, padding, y, photoW, photoH, 10 * scale);
+      ctx.clip();
+      ctx.drawImage(img, padding, y, photoW, photoH);
+      ctx.restore();
+
+      ctx.lineWidth = 1.5 * scale;
+      ctx.strokeStyle = theme.accentSoft;
+      roundRect(ctx, padding, y, photoW, photoH, 10 * scale);
+      ctx.stroke();
+
+      // tiny corner sticker decoration
+      ctx.fillStyle = theme.accent;
+      ctx.font = `${14 * scale}px system-ui, sans-serif`;
+      ctx.fillText(theme.decorations[i % theme.decorations.length], padding + photoW - 20 * scale, y + 20 * scale);
+    }
+
+    // footer: theme name, date, made-with-love
+    const footerTop = padding + TOTAL_PHOTOS * photoH + (TOTAL_PHOTOS - 1) * gap + 14 * scale;
+    ctx.fillStyle = theme.textColor;
+    ctx.textAlign = "center";
+    ctx.font = `600 ${13 * scale}px system-ui, sans-serif`;
+    const dateStr = new Date().toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    ctx.fillText(`${theme.name} · ${dateStr}`, width / 2, footerTop + 6 * scale);
+
+    ctx.font = `${11 * scale}px system-ui, sans-serif`;
+    ctx.fillStyle = theme.accent;
+    ctx.fillText("Made with ❤ at the Photo Booth", width / 2, footerTop + 26 * scale);
+
+    // scattered theme decorations along the very bottom
+    ctx.font = `${12 * scale}px system-ui, sans-serif`;
+    const deco = theme.decorations;
+    const bottomY = height - 14 * scale;
+    for (let i = 0; i < 5; i++) {
+      const x = padding + (i * (photoW - 10 * scale)) / 4;
+      ctx.fillStyle = theme.accent;
+      ctx.fillText(deco[i % deco.length], x, bottomY);
+    }
+
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `photobooth-${theme.id}-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setIsDownloading(false);
+  };
+
+  // ===================================================================
+  // RENDER
+  // ===================================================================
   return (
     <div
-      className={`relative min-h-screen overflow-x-hidden transition-colors duration-[2000ms] ${
-        revealed
-          ? "bg-gradient-to-b from-[#1a0509] via-[#2b070d] to-[#0c0305] text-rose-50"
-          : "bg-gradient-to-b from-[#fbfaf7] via-[#eef4fb] to-[#f7f3ea] text-slate-700"
-      }`}
-      style={{ fontFamily: "'Inter', sans-serif" }}
+      className={`min-h-screen w-full bg-gradient-to-br ${theme.gradient} relative overflow-hidden transition-colors duration-700 flex items-center justify-center p-4`}
     >
-      {/* Local styles: keyframes only, no component library, no CSS modules */}
-      <style>{`
-        @keyframes floatSlow { 0%,100% { transform: translateY(0px);} 50% { transform: translateY(-18px);} }
-        @keyframes floatSlower { 0%,100% { transform: translateY(0px) translateX(0px);} 50% { transform: translateY(-26px) translateX(10px);} }
-        @keyframes driftAcross { 0% { transform: translateX(-10%);} 100% { transform: translateX(110%);} }
-        @keyframes fallFeather { 0% { transform: translateY(-10%) rotate(0deg); opacity:0.9;} 100% { transform: translateY(120vh) rotate(180deg); opacity:0;} }
-        @keyframes pulseGlow { 0%,100% { opacity:0.5;} 50% { opacity:1;} }
-        @keyframes shimmer { 0% { background-position: -200% 0;} 100% { background-position: 200% 0;} }
-        .font-display { font-family: 'Cinzel', serif; }
-        .font-serif-elegant { font-family: 'Cormorant Garamond', serif; }
-        .reduce-motion { animation: none !important; transition: none !important; }
-      `}</style>
+      <FloatingBlobs accent={theme.accent} />
 
-      {/* ---------- Ambient background: floating clouds / feathers ---------- */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        {!revealed && (
-          <>
-            <CloudSVG className="absolute top-[8%] left-[-5%] w-72 text-white/70" style={{ animation: "driftAcross 60s linear infinite" }} />
-            <CloudSVG className="absolute top-[22%] left-[-10%] w-56 text-white/50" style={{ animation: "driftAcross 90s linear infinite", animationDelay: "10s" }} />
-            <CloudSVG className="absolute top-[45%] left-[-8%] w-64 text-white/40" style={{ animation: "driftAcross 75s linear infinite", animationDelay: "5s" }} />
-            <FeatherSVG className="absolute top-0 left-[15%] w-4 text-white/80" style={{ animation: "fallFeather 14s linear infinite", animationDelay: "0s" }} />
-            <FeatherSVG className="absolute top-0 left-[45%] w-3 text-amber-100/80" style={{ animation: "fallFeather 18s linear infinite", animationDelay: "4s" }} />
-            <FeatherSVG className="absolute top-0 left-[70%] w-4 text-white/70" style={{ animation: "fallFeather 16s linear infinite", animationDelay: "8s" }} />
-            <FeatherSVG className="absolute top-0 left-[85%] w-3 text-white/60" style={{ animation: "fallFeather 20s linear infinite", animationDelay: "2s" }} />
-          </>
-        )}
-        {revealed && (
-          <>
-            <div className="absolute top-[10%] left-[10%] w-64 h-64 rounded-full bg-rose-900/30 blur-3xl" style={{ animation: "pulseGlow 6s ease-in-out infinite" }} />
-            <div className="absolute bottom-[15%] right-[10%] w-80 h-80 rounded-full bg-red-950/40 blur-3xl" style={{ animation: "pulseGlow 8s ease-in-out infinite" }} />
-          </>
-        )}
-      </div>
+      {/* hidden canvas used purely to grab video frames */}
+      <canvas ref={captureCanvasRef} className="hidden" />
 
-      {/* ---------- [EASTER EGG] M key banner ---------- */}
-      {mAlert && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-rose-950 text-rose-50 px-5 py-3 rounded-full shadow-2xl border border-rose-700/60 text-sm font-medium tracking-wide animate-[pulseGlow_1s_ease-in-out_infinite]">
-          ⚠️ Mythological Entity Detected.
-        </div>
+      {step === "landing" && <Landing onStart={goToTheme} />}
+
+      {step === "theme" && (
+        <ThemePicker
+          themes={THEMES}
+          selected={themeId}
+          onSelect={setThemeId}
+          onConfirm={beginBooth}
+          error={cameraError}
+        />
       )}
 
-      {/* ================= [SECTION: NAV] ================= */}
-      <nav className="relative z-20 flex items-center justify-between px-6 md:px-12 py-6">
-        <span className={`font-display tracking-[0.2em] text-sm ${revealed ? "text-rose-200" : "text-slate-600"}`}>
-          PRECIOUS
-        </span>
-        <div className="hidden md:flex gap-8 text-xs tracking-widest uppercase">
-          <button onClick={() => scrollTo("about")} className="opacity-70 hover:opacity-100 transition">About</button>
-          <button onClick={() => scrollTo("registry")} className="opacity-70 hover:opacity-100 transition">Registry</button>
-          <button onClick={() => scrollTo("scanner")} className="opacity-70 hover:opacity-100 transition">Verification</button>
-        </div>
-      </nav>
-
-      {/* ================= [SECTION: HERO] ================= */}
-      <section className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-8 px-6 md:px-16 pt-8 pb-24 md:pt-16 md:pb-32 max-w-7xl mx-auto">
-        <Reveal className="flex-1 flex flex-col items-center md:items-start text-center md:text-left" delay={0}>
-          <div
-            onClick={handleHaloClick}
-            className="mb-6 cursor-pointer select-none"
-            title="✨"
-          >
-            <div
-              className={`w-16 h-6 mx-auto md:mx-0 border-4 rounded-full transition-all duration-500 ${
-                haloBat
-                  ? "border-transparent bg-[radial-gradient(ellipse_at_center,transparent_0%,transparent_40%)] scale-x-150 skew-x-12"
-                  : "border-amber-300/80"
-              }`}
-              style={
-                haloBat
-                  ? {
-                      clipPath:
-                        "polygon(0% 50%, 20% 0%, 40% 50%, 50% 20%, 60% 50%, 80% 0%, 100% 50%, 80% 100%, 60% 60%, 50% 100%, 40% 60%, 20% 100%)",
-                      backgroundColor: "#3f0d14",
-                    }
-                  : { boxShadow: "0 0 22px 4px rgba(245,215,142,0.55)" }
-              }
-            />
-          </div>
-          <h1 className="font-display text-5xl md:text-7xl tracking-wide mb-4">
-            PRECIOUS
-          </h1>
-          <p className="font-serif-elegant text-2xl md:text-3xl italic mb-6 opacity-80">
-            Heaven's Brightest Angel
-          </p>
-          <p className="max-w-md text-sm md:text-base opacity-60 mb-10 tracking-wide">
-            "Grace. Kindness. Elegance. Absolutely nothing suspicious."
-          </p>
-          <div className="flex gap-4 flex-wrap justify-center md:justify-start">
-            <button
-              onClick={() => scrollTo("about")}
-              className="px-7 py-3 rounded-full bg-gradient-to-r from-amber-200 to-amber-100 text-slate-800 text-sm tracking-widest uppercase font-medium shadow-lg hover:shadow-amber-200/50 hover:-translate-y-0.5 transition-all duration-300"
-            >
-              Meet Precious
-            </button>
-            <button
-              onClick={() => scrollTo("registry")}
-              className="px-7 py-3 rounded-full border border-current/30 text-sm tracking-widest uppercase font-medium hover:bg-white/10 hover:-translate-y-0.5 transition-all duration-300"
-            >
-              Angel Profile
-            </button>
-          </div>
-        </Reveal>
-
-        <Reveal className="flex-1 max-w-sm" delay={200}>
-          <div
-            className="relative rounded-[2rem] p-6 backdrop-blur-xl bg-white/40 border border-white/60 shadow-2xl"
-            style={{ animation: "floatSlow 7s ease-in-out infinite" }}
-          >
-            <AngelIllustration />
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ================= [SECTION: ABOUT] ================= */}
-      <section id="about" className="relative z-10 px-6 md:px-16 py-20 max-w-5xl mx-auto">
-        <Reveal>
-          <h2 className="font-display text-3xl md:text-4xl text-center mb-14 tracking-wide">
-            About Precious
-          </h2>
-        </Reveal>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {[
-            ["Name", "Precious"],
-            ["Occupation", "Guardian Angel"],
-            ["Species", "Human"],
-            ["Personality", "Gentle, kind, caring"],
-          ].map(([label, val], i) => (
-            <Reveal key={label} delay={i * 100}>
-              <div className="h-full rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <p className="text-[10px] tracking-[0.2em] uppercase opacity-50 mb-2">{label}</p>
-                <p className="font-serif-elegant text-lg md:text-xl">{val}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-        <Reveal delay={300} className="mt-5">
-          <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 shadow-md">
-            <p className="text-[10px] tracking-[0.2em] uppercase opacity-50 mb-3">Personality Traits</p>
-            <div className="flex flex-wrap gap-2">
-              {["Gentle", "Kind", "Caring", "Patient", "Friendly", "Always brings positivity"].map((t) => (
-                <span key={t} className="px-3 py-1 rounded-full bg-white/70 text-xs tracking-wide border border-white/80">
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ================= [SECTION: QUALITIES] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-20 max-w-6xl mx-auto">
-        <Reveal>
-          <h2 className="font-display text-3xl md:text-4xl text-center mb-14 tracking-wide">
-            Heavenly Qualities
-          </h2>
-        </Reveal>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {QUALITIES.map((q, i) => (
-            <Reveal key={q.title} delay={i * 100}>
-              <div className="h-full rounded-2xl p-8 text-center backdrop-blur-xl bg-white/50 border border-white/60 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="text-4xl mb-4">{q.icon}</div>
-                <h3 className="font-display text-lg mb-2">{q.title}</h3>
-                <p className="text-sm opacity-60">{q.body}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= [SECTION: GALLERY] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-20 max-w-6xl mx-auto">
-        <Reveal>
-          <h2 className="font-display text-3xl md:text-4xl text-center mb-14 tracking-wide">
-            Gallery
-          </h2>
-        </Reveal>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {GALLERY.map((g, i) => (
-            <Reveal key={g.title} delay={i * 80}>
-              <div className="group relative rounded-2xl overflow-hidden aspect-[4/5] backdrop-blur-xl bg-white/40 border border-white/60 shadow-md">
-                <div className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-                  <div className="w-2/3 h-2/3 opacity-80">
-                    <AngelIllustration />
-                  </div>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                <p className="absolute bottom-3 left-4 text-white text-sm font-serif-elegant italic drop-shadow">
-                  {g.title}
-                </p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= [SECTION: TESTIMONIALS] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-20 max-w-5xl mx-auto">
-        <Reveal>
-          <h2 className="font-display text-3xl md:text-4xl text-center mb-14 tracking-wide">
-            Testimonials
-          </h2>
-        </Reveal>
-        <div className="grid sm:grid-cols-2 gap-6">
-          {TESTIMONIALS.map((t, i) => (
-            <Reveal key={t} delay={i * 100}>
-              <div className="h-full rounded-2xl p-7 backdrop-blur-xl bg-white/50 border border-white/60 shadow-md">
-                <p className="text-amber-500 mb-3 tracking-widest">★★★★★</p>
-                <p className="font-serif-elegant text-lg italic opacity-80">"{t}"</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= [SECTION: REGISTRY] ================= */}
-      <section id="registry" className="relative z-10 px-6 md:px-16 py-20 max-w-4xl mx-auto">
-        <Reveal>
-          <div className="rounded-3xl p-8 md:p-10 backdrop-blur-xl bg-white/50 border border-white/60 shadow-lg">
-            <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
-              <h2 className="font-display text-2xl md:text-3xl tracking-wide">
-                Official Heavenly Registry
-              </h2>
-              <span className="text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300/60">
-                Verified Angel
-              </span>
-            </div>
-            <p className="text-xs opacity-50 mb-8 italic">
-              Verification currently undergoing routine celestial audit.
-            </p>
-
-            <div className="space-y-6">
-              {REGISTRY_STATS.map((s) => (
-                <div key={s.label}>
-                  <div className="flex justify-between text-sm mb-1.5">
-                    <span className={s.suspicious ? "text-rose-600 font-medium" : "opacity-70"}>
-                      {s.label}
-                    </span>
-                    <span className={s.suspicious ? "text-rose-600 font-medium" : "opacity-70"}>
-                      {s.suspicious ? s.tag : `${s.value}%`}
-                    </span>
-                  </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-200/60 overflow-hidden">
-                    {s.suspicious ? (
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-rose-400 to-rose-600"
-                        style={{ width: "35%", animation: "pulseGlow 2s ease-in-out infinite" }}
-                      />
-                    ) : (
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-amber-200 to-amber-400"
-                        style={{ width: `${s.value}%` }}
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ================= [SECTION: INVESTIGATION] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-20 max-w-4xl mx-auto">
-        <Reveal>
-          <h2 className="font-display text-3xl md:text-4xl text-center mb-4 tracking-wide">
-            Investigation Records
-          </h2>
-          <p className="text-center text-xs uppercase tracking-widest opacity-40 mb-14">
-            Filed by the Office of Celestial Oversight
-          </p>
-        </Reveal>
-        <div className="space-y-5">
-          {REPORTS.map((r, i) => (
-            <Reveal key={r.id} delay={i * 100}>
-              <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/50 border border-white/60 shadow-md flex gap-5">
-                <div className="font-display text-sm opacity-40 shrink-0 pt-0.5">
-                  Report #{r.id}
-                </div>
-                <div>
-                  <p className="text-sm md:text-base mb-1">{r.body}</p>
-                  <p className="text-xs italic opacity-50">{r.note}</p>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= [SECTION: SCANNER] ================= */}
-      <section
-        id="scanner"
-        ref={scannerRef}
-        className="relative z-10 px-6 md:px-16 py-24 max-w-3xl mx-auto"
-      >
-        <Reveal>
-          <h2 className="font-display text-3xl md:text-4xl text-center mb-12 tracking-wide">
-            Celestial Verification Scanner
-          </h2>
-        </Reveal>
-        <Reveal delay={150}>
-          <div className="rounded-2xl p-8 bg-slate-900 border border-slate-700 shadow-2xl font-mono text-emerald-300 text-sm">
-            <p className="mb-3 opacity-70">
-              &gt; Scanning{scanActive ? "..." : ""}
-            </p>
-            <div className="w-full h-3 rounded-full bg-slate-700 overflow-hidden mb-5">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600"
-                style={{
-                  width: scanActive ? "100%" : "0%",
-                  transition: "width 4.4s linear",
-                }}
-              />
-            </div>
-            <p className="opacity-80 h-5">
-              {scanActive ? SCAN_LINES[scanIndex] : "Awaiting subject..."}
-            </p>
-            <p className="mt-4 text-[11px] opacity-40 italic">
-              Cross-checking Philippine Mythological Database...
-            </p>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ================= [SECTION: FINAL REVEAL] ================= */}
-      <section
-        ref={finalRevealRef}
-        className="relative z-10 px-6 md:px-16 py-28 max-w-3xl mx-auto"
-      >
-        <div
-          className={`rounded-3xl p-8 md:p-12 border shadow-2xl transition-all duration-[1500ms] ${
-            revealed
-              ? "bg-black/40 border-rose-700/50 opacity-100 scale-100"
-              : "bg-white/40 border-white/50 opacity-40 scale-95"
-          }`}
-        >
-          <p className="text-center font-mono text-xs tracking-[0.3em] mb-6 opacity-70">
-            ======================== <br />
-            IDENTITY VERIFIED <br />
-            ========================
-          </p>
-          <div className="grid sm:grid-cols-2 gap-5 text-sm">
-            {[
-              ["Subject Name", "PRECIOUS"],
-              ["Actual Species", "MANANANGGAL"],
-              ["Alias", '"Heaven\'s Brightest Angel"'],
-              ["Occupation", "Professional Angel Impersonator"],
-              ["Current Status", "Still convincing everyone she's innocent."],
-              ["Last Confirmed Activity", "Flying around after midnight."],
-            ].map(([label, val]) => (
-              <div key={label} className={revealed ? "border-b border-rose-800/40 pb-3" : "border-b border-slate-300/40 pb-3"}>
-                <p className="text-[10px] uppercase tracking-widest opacity-50 mb-1">{label}</p>
-                <p className="font-serif-elegant text-lg">{val}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 pt-4">
-            <p className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Threat Level</p>
-            <p className="font-serif-elegant text-lg">
-              Mostly Harmless{" "}
-              <span className="italic text-sm opacity-70">
-                (unless you're outside at 2:00 AM)
-              </span>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= [SECTION: EVIDENCE] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-20 max-w-3xl mx-auto">
-        <Reveal>
-          <h2 className={`font-display text-3xl md:text-4xl text-center mb-12 tracking-wide ${revealed ? "text-rose-200" : ""}`}>
-            Evidence Collected
-          </h2>
-        </Reveal>
-        <div className="space-y-3">
-          {EVIDENCE.map((e, i) => (
-            <Reveal key={e} delay={i * 80}>
-              <div
-                className={`rounded-xl px-5 py-4 border flex gap-3 items-start ${
-                  revealed
-                    ? "bg-rose-950/40 border-rose-800/50"
-                    : "bg-white/50 border-white/60"
-                }`}
-              >
-                <span className={revealed ? "text-rose-400" : "text-emerald-500"}>✓</span>
-                <span className="text-sm md:text-base opacity-90">{e}</span>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= [SECTION: ANNOUNCEMENT] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-20 max-w-3xl mx-auto">
-        <Reveal>
-          <div
-            className={`rounded-2xl p-8 border-2 shadow-xl ${
-              revealed
-                ? "bg-rose-950/50 border-rose-600/60"
-                : "bg-amber-50 border-amber-400/60"
-            }`}
-          >
-            <p className="text-center font-display text-sm md:text-base tracking-widest mb-6">
-              ⚠️ DEPARTMENT OF MYTHOLOGICAL AFFAIRS ⚠️
-            </p>
-            <p className="text-sm md:text-base opacity-90 mb-4 leading-relaxed">
-              Following an extensive investigation, we have concluded that Precious has
-              successfully disguised herself as an angel.
-            </p>
-            <p className="text-sm opacity-70 mb-1">Please remain calm.</p>
-            <p className="text-sm opacity-70 mb-4">Do not panic.</p>
-            <p className="text-sm opacity-90 mb-2">
-              If the subject says: <span className="italic">"I'm just an angel."</span>
-            </p>
-            <p className="text-sm opacity-70 mb-6">
-              Authorities recommend politely pretending to believe her.
-            </p>
-            <p className="text-xs uppercase tracking-widest opacity-50">
-              Case Status: <span className="font-medium">Closed.</span>
-            </p>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ================= [SECTION: APPEAL] ================= */}
-      <section className="relative z-10 px-6 md:px-16 py-16 max-w-3xl mx-auto text-center">
-        <Reveal>
-          <button
-            onClick={() => setAppealOpen(true)}
-            className={`px-8 py-4 rounded-full text-sm tracking-widest uppercase font-medium shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${
-              revealed
-                ? "bg-gradient-to-r from-rose-700 to-rose-900 text-rose-50"
-                : "bg-gradient-to-r from-amber-200 to-amber-100 text-slate-800"
-            }`}
-          >
-            Appeal Investigation Results
-          </button>
-        </Reveal>
-      </section>
-
-      {appealOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
-          onClick={() => setAppealOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-sm w-full rounded-2xl p-8 bg-[#1a0509] border border-rose-700/50 shadow-2xl text-center text-rose-50"
-          >
-            <h3 className="font-display text-xl mb-4 tracking-wide">Appeal Denied.</h3>
-            <p className="text-sm opacity-80 mb-6">
-              TANGA KA BA MANANANGGAL KA NA NGA ITATANGGI MO PA
-            </p>
-            <button
-              onClick={() => setAppealOpen(false)}
-              className="px-6 py-2 rounded-full border border-rose-500/50 text-xs uppercase tracking-widest hover:bg-rose-900/40 transition"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+      {step === "camera" && (
+        <CameraScreen
+          theme={theme}
+          videoRef={videoRef}
+          photoIndex={photoIndex}
+          countdown={countdown}
+          flash={flash}
+          shutterPulse={shutterPulse}
+          message={message}
+          photos={photos}
+        />
       )}
 
-      {/* ================= [SECTION: FOOTER] ================= */}
-      <footer
-        className={`relative z-10 px-6 md:px-16 py-12 text-center text-xs tracking-widest ${
-          revealed ? "text-rose-300/60" : "text-slate-500/70"
-        }`}
-      >
-        <p>© 2026 Department of Mythological Affairs</p>
-        <p>Official Angel Verification Program</p>
-        <p className="mt-1">
-          Case Closed. <span className="italic opacity-70">(Subject still denies everything.)</span>
-        </p>
-      </footer>
+      {step === "generating" && <Generating theme={theme} />}
+
+      {step === "strip" && (
+        <StripResult
+          theme={theme}
+          photos={photos}
+          onDownload={downloadStrip}
+          onRetake={retake}
+          onStartOver={startOver}
+          isDownloading={isDownloading}
+        />
+      )}
     </div>
   );
+}
+
+// =====================================================================
+// Screen: Landing
+// =====================================================================
+function Landing({ onStart }) {
+  return (
+    <div className="relative z-10 max-w-md w-full text-center animate-[fadeIn_0.6s_ease-out]">
+      <div className="mx-auto mb-6 w-28 h-28 rounded-full bg-white/70 backdrop-blur-sm shadow-xl flex items-center justify-center animate-[scaleIn_0.5s_ease-out]">
+        <div className="relative">
+          <Camera className="w-14 h-14 text-rose-500" strokeWidth={1.6} />
+          <Sparkles className="w-5 h-5 text-fuchsia-400 absolute -top-2 -right-3 animate-pulse" />
+        </div>
+      </div>
+
+      <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-rose-900 mb-2 drop-shadow-sm">
+        Life • Four Booth
+      </h1>
+      <p className="text-rose-700/80 text-sm sm:text-base mb-10">
+        Snap four candid frames and take home a keepsake strip — mall photo
+        booth magic, right from your browser.
+      </p>
+
+      <button
+        onClick={onStart}
+        className="group inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-semibold px-8 py-3.5 rounded-full shadow-lg shadow-rose-300/50 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
+      >
+        Start Photo Booth
+        <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+      </button>
+
+      <p className="mt-4 text-xs text-rose-700/60">
+        We'll ask for camera access on the next step.
+      </p>
+    </div>
+  );
+}
+
+// =====================================================================
+// Screen: Theme picker
+// =====================================================================
+function ThemePicker({ themes, selected, onSelect, onConfirm, error }) {
+  return (
+    <div className="relative z-10 max-w-lg w-full animate-[fadeIn_0.5s_ease-out]">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">
+          Pick your strip style
+        </h2>
+        <p className="text-sm text-gray-500">You can always retake with a new mood</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        {themes.map((t) => {
+          const active = t.id === selected;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onSelect(t.id)}
+              className={`relative rounded-2xl p-3 bg-white/80 backdrop-blur-sm border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:scale-95 text-left ${
+                active ? "shadow-lg -translate-y-1" : "shadow-sm"
+              }`}
+              style={{ borderColor: active ? t.accent : "transparent" }}
+            >
+              {active && (
+                <span
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-white shadow"
+                  style={{ backgroundColor: t.accent }}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+              )}
+              <div className="flex gap-1.5 mb-2">
+                {t.swatch.map((c, i) => (
+                  <span
+                    key={i}
+                    className="w-4 h-4 rounded-full border border-white shadow-sm"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <p className="text-sm font-semibold text-gray-800">{t.name}</p>
+              <p className="text-[11px] text-gray-500">{t.tagline}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      {error && (
+        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-center">
+          {error}
+        </div>
+      )}
+
+      <div className="text-center">
+        <button
+          onClick={onConfirm}
+          className="inline-flex items-center gap-2 bg-gray-900 hover:bg-black active:scale-95 text-white font-semibold px-8 py-3.5 rounded-full shadow-lg transition-all duration-200 hover:-translate-y-0.5"
+        >
+          <Camera className="w-4 h-4" />
+          Start Photo Booth
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// Screen: Camera + countdown + capture
+// =====================================================================
+function CameraScreen({ theme, videoRef, photoIndex, countdown, flash, shutterPulse, message, photos }) {
+  const progressPct = Math.min(photos.length, TOTAL_PHOTOS) / TOTAL_PHOTOS;
+  // ring progress for the countdown circle (3 -> 0%, 1 -> ~66%)
+  const ringPct = countdown ? (3 - countdown) / 3 : 0;
+  const circumference = 2 * Math.PI * 44;
+
+  return (
+    <div className="relative z-10 max-w-md w-full animate-[fadeIn_0.5s_ease-out]">
+      {/* flash overlay */}
+      <div
+        className={`fixed inset-0 bg-white pointer-events-none z-50 transition-opacity duration-150 ${
+          flash ? "opacity-90" : "opacity-0"
+        }`}
+      />
+
+      <div className="text-center mb-4">
+        <span
+          className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold bg-white/80 backdrop-blur-sm shadow-sm"
+          style={{ color: theme.textColor }}
+        >
+          Photo {Math.min(photoIndex + 1, TOTAL_PHOTOS)} of {TOTAL_PHOTOS}
+        </span>
+        <div className="mt-2 w-full max-w-xs mx-auto h-1.5 bg-white/50 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPct * 100}%`, backgroundColor: theme.accent }}
+          />
+        </div>
+      </div>
+
+      <div
+        className={`relative rounded-[28px] overflow-hidden bg-black shadow-2xl transition-transform duration-150 ${
+          shutterPulse ? "scale-[0.98]" : "scale-100"
+        }`}
+        style={{ boxShadow: `0 25px 50px -12px ${theme.accent}55` }}
+      >
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full aspect-[4/3] object-cover -scale-x-100"
+        />
+
+        {/* countdown overlay */}
+        {countdown && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+            <div className="relative w-28 h-28">
+              <svg className="w-28 h-28 -rotate-90" viewBox="0 0 96 96">
+                <circle cx="48" cy="48" r="44" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.35)" strokeWidth="4" />
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="44"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={circumference * (1 - ringPct)}
+                  className="transition-all duration-[1000ms] ease-linear"
+                />
+              </svg>
+              <div
+                key={countdown}
+                className="absolute inset-0 flex items-center justify-center text-white text-5xl font-extrabold animate-[scaleIn_0.35s_ease-out]"
+              >
+                {countdown}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* encouraging message */}
+        {!countdown && (
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+            <span
+              key={message}
+              className="px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-sm font-semibold shadow animate-[fadeIn_0.3s_ease-out]"
+              style={{ color: theme.textColor }}
+            >
+              {message}
+            </span>
+          </div>
+        )}
+
+        {/* shutter icon pulse in the corner for tactile feedback */}
+        <div
+          className={`absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center transition-transform duration-150 ${
+            shutterPulse ? "scale-125" : "scale-100"
+          }`}
+        >
+          <Aperture className="w-4.5 h-4.5" style={{ color: theme.accent }} />
+        </div>
+      </div>
+
+      {/* thumbnail strip of captured photos so far */}
+      <div className="flex justify-center gap-2 mt-4">
+        {Array.from({ length: TOTAL_PHOTOS }).map((_, i) => (
+          <div
+            key={i}
+            className="w-14 h-11 rounded-lg overflow-hidden bg-white/60 border-2 flex items-center justify-center"
+            style={{ borderColor: photos[i] ? theme.accent : "rgba(255,255,255,0.5)" }}
+          >
+            {photos[i] ? (
+              <img src={photos[i]} alt={`shot ${i + 1}`} className="w-full h-full object-cover" />
+            ) : (
+              <ImageIcon className="w-4 h-4 text-white/70" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// Screen: Generating
+// =====================================================================
+function Generating({ theme }) {
+  return (
+    <div className="relative z-10 text-center animate-[fadeIn_0.4s_ease-out]">
+      <div className="mx-auto mb-5 w-20 h-20 rounded-full bg-white/80 backdrop-blur-sm shadow-xl flex items-center justify-center">
+        <Loader className="w-9 h-9 animate-spin" style={{ color: theme.accent }} />
+      </div>
+      <p className="text-lg font-semibold" style={{ color: theme.textColor }}>
+        Generating your photo strip...
+      </p>
+      <p className="text-sm text-gray-500 mt-1">Adding a little sparkle ✧</p>
+    </div>
+  );
+}
+
+// =====================================================================
+// Screen: Final strip result
+// =====================================================================
+function StripResult({ theme, photos, onDownload, onRetake, onStartOver, isDownloading }) {
+  const dateStr = new Date().toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  return (
+    <div className="relative z-10 flex flex-col items-center gap-6 animate-[fadeIn_0.5s_ease-out] max-w-sm w-full">
+      {/* the strip itself */}
+      <div
+        className="w-full max-w-[280px] rounded-2xl shadow-2xl p-4 pt-5 relative animate-[scaleIn_0.5s_ease-out]"
+        style={{
+          background: `linear-gradient(to bottom, ${theme.stripBg}, ${theme.stripBg2})`,
+          border: `2px solid ${theme.accent}`,
+        }}
+      >
+        {/* perforation dots */}
+        <div className="absolute -top-1.5 left-0 right-0 flex justify-around px-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span key={i} className="w-1.5 h-1.5 rounded-full bg-white shadow" />
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {photos.map((src, i) => (
+            <div
+              key={i}
+              className="relative rounded-lg overflow-hidden aspect-[4/3] shadow-sm"
+              style={{ border: `1.5px solid ${theme.accentSoft}` }}
+            >
+              <img src={src} alt={`capture ${i + 1}`} className="w-full h-full object-cover" />
+              <span
+                className="absolute bottom-1 right-1.5 text-xs"
+                style={{ color: theme.accent }}
+              >
+                {theme.decorations[i % theme.decorations.length]}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center mt-3">
+          <p className="text-xs font-semibold" style={{ color: theme.textColor }}>
+            {theme.name} · {dateStr}
+          </p>
+          <p className="text-[10px] mt-0.5 flex items-center justify-center gap-1" style={{ color: theme.accent }}>
+            Made with <Heart className="w-2.5 h-2.5 fill-current" /> at the Photo Booth
+          </p>
+        </div>
+      </div>
+
+      {/* controls */}
+      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-[280px]">
+        <button
+          onClick={onDownload}
+          disabled={isDownloading}
+          className="flex-1 inline-flex items-center justify-center gap-2 text-white font-semibold px-5 py-3 rounded-full shadow-lg active:scale-95 transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-70"
+          style={{ backgroundColor: theme.accent }}
+        >
+          {isDownloading ? (
+            <Loader className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          {isDownloading ? "Saving..." : "Download Strip"}
+        </button>
+        <button
+          onClick={onRetake}
+          className="flex-1 inline-flex items-center justify-center gap-2 bg-white/90 hover:bg-white text-gray-700 font-semibold px-5 py-3 rounded-full shadow active:scale-95 transition-all duration-200 hover:-translate-y-0.5"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Retake
+        </button>
+      </div>
+
+      <button
+        onClick={onStartOver}
+        className="text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2 flex items-center gap-1"
+      >
+        <X className="w-3 h-3" />
+        Start over with a new theme
+      </button>
+    </div>
+  );
+}
+
+// =====================================================================
+// Decorative floating blobs used across every screen for ambience
+// =====================================================================
+function FloatingBlobs({ accent }) {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div
+        className="absolute w-72 h-72 rounded-full blur-3xl opacity-30 animate-[float1_8s_ease-in-out_infinite]"
+        style={{ backgroundColor: accent, top: "-5%", left: "-8%" }}
+      />
+      <div
+        className="absolute w-80 h-80 rounded-full blur-3xl opacity-20 animate-[float2_10s_ease-in-out_infinite]"
+        style={{ backgroundColor: accent, bottom: "-10%", right: "-10%" }}
+      />
+      <div
+        className="absolute w-56 h-56 rounded-full blur-3xl opacity-20 animate-[float1_12s_ease-in-out_infinite]"
+        style={{ backgroundColor: "#ffffff", top: "40%", right: "10%" }}
+      />
+      <style>{`
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(20px, -30px) scale(1.08); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-25px, 20px) scale(1.05); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// =====================================================================
+// Canvas helper utilities
+// =====================================================================
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }
